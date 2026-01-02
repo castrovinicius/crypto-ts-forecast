@@ -106,7 +106,9 @@ def evaluate_model(
     mae = float(abs(y_true - y_pred).mean())
 
     # Mean Absolute Percentage Error
-    mape = float((abs(y_true - y_pred) / y_true).mean() * 100)
+    # Use epsilon to avoid division by zero
+    epsilon = 1e-10
+    mape = float((abs(y_true - y_pred) / (abs(y_true) + epsilon)).mean() * 100)
 
     # Root Mean Squared Error
     rmse = float(((y_true - y_pred) ** 2).mean() ** 0.5)
