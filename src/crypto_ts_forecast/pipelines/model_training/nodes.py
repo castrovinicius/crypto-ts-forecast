@@ -114,7 +114,15 @@ def evaluate_model(
     # R-squared
     ss_res = ((y_true - y_pred) ** 2).sum()
     ss_tot = ((y_true - y_true.mean()) ** 2).sum()
-    r2 = float(1 - (ss_res / ss_tot))
+    if abs(ss_tot) < 1e-12:
+        # R-squared is undefined when there is no variance in y_true
+        r2 = float("nan")
+        logger.warning(
+            "R-squared is undefined because the variance of y_true is zero; "
+            "setting r2 to NaN."
+        )
+    else:
+        r2 = float(1 - (ss_res / ss_tot))
 
     metrics = {
         "mae": mae,
