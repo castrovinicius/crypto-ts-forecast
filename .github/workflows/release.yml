@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
       - name: Get current version
         id: current_version
         run: |
@@ -32,35 +35,37 @@ jobs:
       - name: Calculate next version
         id: next_version
         run: |
-          CURRENT="${{ steps.current_version.outputs.version }}"
-          BRANCH="${{ github.base_ref }}"
+          CURRENT='${{ steps.current_version.outputs.version }}'
+          BRANCH='${{ github.base_ref }}'
           
-          # Parse version components
-          IFS='.-' read -r MAJOR MINOR PATCH PRE <<< "$CURRENT"
+          IFS='.-' read -r MAJOR MINOR PATCH PRE <<< "${CURRENT}"
           PATCH=${PATCH:-0}
           
-          if [[ "$BRANCH" == "main" ]]; then
-            # Remove pre-release suffix for main
-            if [[ "$CURRENT" == *"-"* ]]; then
-              NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          if [ "${BRANCH}" = "main" ]; then
+            if echo "${CURRENT}" | grep -q "-"; then
+              BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              if git rev-parse "v${BASE_VERSION}" >/dev/null 2>&1; then
+                echo "Tag v${BASE_VERSION} already exists, incrementing patch version"
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              else
+                NEW_VERSION="${BASE_VERSION}"
+              fi
             else
-              # Increment patch for main
               NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
             fi
-            PRERELEASE="false"
+            PRERELEASE=false
           else
-            # dev branch - create pre-release
-            if [[ "$CURRENT" == *"-dev"* ]]; then
-              PRE_NUM=$(echo "$CURRENT" | grep -oP 'dev\K\d+' || echo "0")
+            if echo "${CURRENT}" | grep -q "\-dev"; then
+              PRE_NUM=$(echo "${CURRENT}" | grep -oP 'dev\K\d+' || echo "0")
               NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}-dev$((PRE_NUM + 1))"
             else
               NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))-dev1"
             fi
-            PRERELEASE="true"
+            PRERELEASE=true
           fi
           
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "prerelease=${PRERELEASE}" >> "${GITHUB_OUTPUT}"
 
       - name: Update version in __init__.py
         run: |
@@ -77,18 +82,25 @@ jobs:
 
       - name: Create and push tag
         run: |
-          git tag "v${{ steps.next_version.outputs.version }}"
-          git push origin "v${{ steps.next_version.outputs.version }}"
+          TAG_NAME="v${{ steps.next_version.outputs.version }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Tag $TAG_NAME already exists. This may indicate a race condition with another workflow run or that the version calculation failed."
+            exit 1
+          fi
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
 
       - name: Generate changelog
         id: changelog
         run: |
-          echo "## Changes" > changelog.md
-          echo "" >> changelog.md
-          echo "${{ github.event.pull_request.body }}" >> changelog.md
-          echo "" >> changelog.md
-          echo "**PR:** #${{ github.event.pull_request.number }}" >> changelog.md
-          echo "**Author:** @${{ github.event.pull_request.user.login }}" >> changelog.md
+          cat > changelog.md << 'EOF'
+          ## Changes
+          
+          ${{ github.event.pull_request.body }}
+          
+          **PR:** #${{ github.event.pull_request.number }}
+          **Author:** @${{ github.event.pull_request.user.login }}
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
