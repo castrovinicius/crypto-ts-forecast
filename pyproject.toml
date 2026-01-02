@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 name = "crypto_ts_forecast"
 readme = "README.md"
 dynamic = ["version"]
@@ -24,7 +24,10 @@ dependencies = [
     "pyarrow>=22.0.0",
     "plotly>=6.5.0",
     "kedro-viz>=12.2.0",
-    "pytest",
+    "pytest==9.0.2",
+    "pytest-cov==6.3.0",
+    "pytest-mock==1.13.0",
+    "ruff==0.14.10",
     "nbsphinx>=0.8.1",
     "myst-parser>=2.0.0"
 ]
@@ -50,8 +53,8 @@ docs = [
 dev = [
     "pytest-cov>=3,<7",
     "pytest-mock>=1.7.1, <2.0",
-    "pytest~=7.2",
-    "ruff~=0.12.0"
+    "pytest~=9.0.2",
+    "ruff~=0.14.10"
 ]
 
 [tool.setuptools.dynamic]

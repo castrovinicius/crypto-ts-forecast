@@ -13,13 +13,9 @@ from kedro.framework.startup import bootstrap_project
 # functionality
 
 class TestKedroRun:
-    def test_kedro_run_no_pipeline(self):
-    # This example test expects a pipeline run failure, since
-    # the default project template contains no pipelines.
+    def test_kedro_run_success(self):
+        """Test that the pipeline runs successfully."""
         bootstrap_project(Path.cwd())
 
-        with pytest.raises(Exception) as excinfo:
-            with KedroSession.create(project_path=Path.cwd()) as session:
-                session.run()
-
-        assert "Pipeline contains no nodes" in str(excinfo.value)
+        with KedroSession.create(project_path=Path.cwd()) as session:
+            session.run()
