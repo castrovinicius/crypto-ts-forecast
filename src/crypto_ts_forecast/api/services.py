@@ -195,7 +195,6 @@ class ForecastService:
                 summary = json.load(f)
 
         # Get parameters
-        params_path = self.project_path / "conf/base/parameters.yml"
         symbol = "BTCUSDT"  # Default
 
         return {
