@@ -35,8 +35,8 @@ jobs:
       - name: Calculate next version
         id: next_version
         run: |
-          CURRENT="${{ steps.current_version.outputs.version }}"
-          BRANCH="${{ github.base_ref }}"
+          CURRENT='${{ steps.current_version.outputs.version }}'
+          BRANCH='${{ github.base_ref }}'
           
           # Parse version components
           IFS='.-' read -r MAJOR MINOR PATCH PRE <<< "$CURRENT"
@@ -76,7 +76,7 @@ jobs:
 
       - name: Update version in __init__.py
         run: |
-          sed -i "s/__version__ = \".*\"/__version__ = \"${{ steps.next_version.outputs.version }}\"/" src/crypto_ts_forecast/__init__.py
+          sed -i 's/__version__ = ".*"/__version__ = "${{ steps.next_version.outputs.version }}"/' src/crypto_ts_forecast/__init__.py
 
       - name: Commit version bump
         run: |
@@ -100,12 +100,14 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          echo "## Changes" > changelog.md
-          echo "" >> changelog.md
-          echo "${{ github.event.pull_request.body }}" >> changelog.md
-          echo "" >> changelog.md
-          echo "**PR:** #${{ github.event.pull_request.number }}" >> changelog.md
-          echo "**Author:** @${{ github.event.pull_request.user.login }}" >> changelog.md
+          cat > changelog.md << 'EOF'
+          ## Changes
+          
+          ${{ github.event.pull_request.body }}
+          
+          **PR:** #${{ github.event.pull_request.number }}
+          **Author:** @${{ github.event.pull_request.user.login }}
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
