@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
       - name: Get current version
         id: current_version
         run: |
