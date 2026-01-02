@@ -2,3 +2,90 @@
 #
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+# =============================================================================
+# Data Ingestion Pipeline Datasets
+# =============================================================================
+
+raw_bitcoin_data:
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/bitcoin_raw.parquet
+  save_args:
+    compression: gzip
+
+validated_bitcoin_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/bitcoin_validated.parquet
+  save_args:
+    compression: gzip
+
+# =============================================================================
+# Data Processing Pipeline Datasets
+# =============================================================================
+
+prophet_base_dataset:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/prophet_base.parquet
+  save_args:
+    compression: gzip
+
+prophet_full_dataset:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/prophet_full.parquet
+  save_args:
+    compression: gzip
+
+train_dataset:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/train_data.parquet
+  save_args:
+    compression: gzip
+
+test_dataset:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/test_data.parquet
+  save_args:
+    compression: gzip
+
+# =============================================================================
+# Model Training Pipeline Datasets
+# =============================================================================
+
+prophet_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/prophet_model.pkl
+  backend: pickle
+
+model_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_metrics.json
+
+model_report:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_report.json
+
+# =============================================================================
+# Inference Pipeline Datasets
+# =============================================================================
+
+future_dataframe:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/future_dataframe.parquet
+  save_args:
+    compression: gzip
+
+full_forecast:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/full_forecast.parquet
+  save_args:
+    compression: gzip
+
+future_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/future_predictions.parquet
+  save_args:
+    compression: gzip
+
+forecast_summary:
+  type: json.JSONDataset
+  filepath: data/08_reporting/forecast_summary.json

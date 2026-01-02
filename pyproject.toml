@@ -11,11 +11,27 @@ dependencies = [
     "ipython>=8.10",
     "jupyterlab>=3.0",
     "notebook",
-    "kedro~=1.1.1"
+    "kedro~=1.1.1",
+    "prophet==1.2.1",
+    "fastapi>=0.128.0",
+    "uvicorn>=0.40.0",
+    "requests>=2.32.5",
+    "pandas>=2.3.3",
+    "pandas-stubs>=2.3.3.251201",
+    "pydantic>=2.12.5",
+    "python-multipart>=0.0.21",
+    "kedro-datasets>=9.1.1",
+    "pyarrow>=22.0.0",
+    "plotly>=6.5.0",
+    "kedro-viz>=12.2.0",
+    "pytest",
+    "nbsphinx>=0.8.1",
+    "myst-parser>=2.0.0"
 ]
 
 [project.scripts]
 "crypto-ts-forecast" = "crypto_ts_forecast.__main__:main"
+"crypto-forecast-api" = "crypto_ts_forecast.api.main:main"
 
 [project.entry-points."kedro.hooks"]
 
@@ -81,3 +97,6 @@ select = [
     "T201", # Print Statement
 ]
 ignore = ["E501"]  # Ruff format takes care of line-too-long
+
+[tool.kedro_telemetry]
+project_id = "30120872117e4ed8aed649ec4653091e"
