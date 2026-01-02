@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
       - name: Get current version
         id: current_version
         run: |
@@ -40,12 +43,21 @@ jobs:
           PATCH=${PATCH:-0}
           
           if [[ "$BRANCH" == "main" ]]; then
-            # Remove pre-release suffix for main
+            # Scenario: Merging from dev to main (e.g., 0.1.1-dev3 → 0.1.1 or 0.1.2)
             if [[ "$CURRENT" == *"-"* ]]; then
-              NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              # Calculate base version without suffix
+              BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              # Check if tag exists, if yes increment patch
+              if git rev-parse "v${BASE_VERSION}" >/dev/null 2>&1; then
+                echo "Tag v${BASE_VERSION} already exists, incrementing patch version"
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              else
+                NEW_VERSION="${BASE_VERSION}"
+              fi
+            # Scenario: Merging within main (e.g., 0.1.1 → 0.1.2)
             else
               # Increment patch for main
-              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1)}"
             fi
             PRERELEASE="false"
           else
@@ -77,8 +89,13 @@ jobs:
 
       - name: Create and push tag
         run: |
-          git tag "v${{ steps.next_version.outputs.version }}"
-          git push origin "v${{ steps.next_version.outputs.version }}"
+          TAG_NAME="v${{ steps.next_version.outputs.version }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Tag $TAG_NAME already exists. This may indicate a race condition with another workflow run or that the version calculation failed."
+            exit 1
+          fi
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
 
       - name: Generate changelog
         id: changelog
