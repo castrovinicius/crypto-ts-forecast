@@ -87,7 +87,7 @@ jobs:
         run: |
           TAG_NAME="v${{ steps.next_version.outputs.version }}"
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Error: Tag $TAG_NAME already exists"
+            echo "Error: Tag $TAG_NAME already exists. This should not happen - version calculation may have failed."
             exit 1
           fi
           git tag "$TAG_NAME"
