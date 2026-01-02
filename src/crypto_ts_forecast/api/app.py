@@ -211,7 +211,6 @@ def register_routes(app: FastAPI) -> None:
         service = get_forecast_service()
         result = service.run_pipeline(
             pipeline_name=request.pipeline_name,
-            params=request.params,
         )
 
         if result["status"] == "error":
