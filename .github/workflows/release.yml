@@ -76,7 +76,7 @@ jobs:
 
       - name: Update version in __init__.py
         run: |
-          sed -i 's/__version__ = ".*"/__version__ = "${{ steps.next_version.outputs.version }}"/' src/crypto_ts_forecast/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"${{ steps.next_version.outputs.version }}\"/" src/crypto_ts_forecast/__init__.py
 
       - name: Commit version bump
         run: |
