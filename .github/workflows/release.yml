@@ -42,7 +42,15 @@ jobs:
           if [[ "$BRANCH" == "main" ]]; then
             # Remove pre-release suffix for main
             if [[ "$CURRENT" == *"-"* ]]; then
-              NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              # Calculate base version without suffix
+              BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              # Check if tag exists, if yes increment patch
+              if git rev-parse "v${BASE_VERSION}" >/dev/null 2>&1; then
+                echo "Tag v${BASE_VERSION} already exists, incrementing patch version"
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              else
+                NEW_VERSION="${BASE_VERSION}"
+              fi
             else
               # Increment patch for main
               NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
@@ -77,8 +85,13 @@ jobs:
 
       - name: Create and push tag
         run: |
-          git tag "v${{ steps.next_version.outputs.version }}"
-          git push origin "v${{ steps.next_version.outputs.version }}"
+          TAG_NAME="v${{ steps.next_version.outputs.version }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Tag $TAG_NAME already exists"
+            exit 1
+          fi
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
 
       - name: Generate changelog
         id: changelog
