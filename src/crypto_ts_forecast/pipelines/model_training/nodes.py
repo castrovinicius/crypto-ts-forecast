@@ -106,9 +106,13 @@ def evaluate_model(
     mae = float(abs(y_true - y_pred).mean())
 
     # Mean Absolute Percentage Error
-    # Use epsilon to avoid division by zero
-    epsilon = 1e-10
-    mape = float((abs(y_true - y_pred) / (abs(y_true) + epsilon)).mean() * 100)
+    # Filter out zero values to avoid division by zero
+    non_zero_mask = y_true != 0
+    if non_zero_mask.any():
+        mape = float((abs(y_true[non_zero_mask] - y_pred[non_zero_mask]) / abs(y_true[non_zero_mask])).mean() * 100)
+    else:
+        # If all values are zero, MAPE is undefined; use NaN
+        mape = float('nan')
 
     # Root Mean Squared Error
     rmse = float(((y_true - y_pred) ** 2).mean() ** 0.5)
