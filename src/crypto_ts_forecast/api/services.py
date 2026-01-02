@@ -46,7 +46,6 @@ class ForecastService:
 
         Args:
             pipeline_name: Name of the pipeline to run.
-            params: Optional parameter overrides.
 
         Returns:
             Dictionary with execution results.
