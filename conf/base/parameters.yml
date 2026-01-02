@@ -1,0 +1,49 @@
+# =============================================================================
+# Binance API Configuration
+# =============================================================================
+binance:
+  # Trading pair symbol
+  symbol: "BTCUSDT"
+  # Kline interval: 1d for daily data
+  interval: "1d"
+  # Number of years of historical data to fetch
+  years_of_data: 2
+
+# =============================================================================
+# Prophet Model Configuration
+# =============================================================================
+prophet:
+  # Column to use as target variable for forecasting
+  price_column: "close"
+  
+  # Seasonality mode: 'additive' or 'multiplicative'
+  # For crypto, multiplicative often works better due to price volatility
+  seasonality_mode: "multiplicative"
+  
+  # Seasonality components
+  yearly_seasonality: true
+  weekly_seasonality: true
+  daily_seasonality: false  # Not needed for daily data
+  
+  # Changepoint prior scale: higher = more flexible trend
+  # For volatile assets like BTC, a value between 0.1-0.5 works well
+  changepoint_prior_scale: 0.5
+  
+  # Seasonality prior scale: higher = more flexible seasonality
+  seasonality_prior_scale: 10.0
+  
+  # Proportion of data used for changepoint detection
+  changepoint_range: 0.9  # Use 90% of data for changepoint detection
+
+  # Whether to add volume as an additional regressor
+  add_volume_regressor: false
+  
+  # Test set size in days for model evaluation
+  test_size_days: 30
+
+# =============================================================================
+# Forecast Configuration
+# =============================================================================
+forecast:
+  # Number of days to forecast into the future
+  days_ahead: 30

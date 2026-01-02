@@ -1,101 +1,274 @@
-# crypto-ts-forecast
+# Bitcoin Price Forecast API
 
 [![Powered by Kedro](https://img.shields.io/badge/powered_by-kedro-ffc900?logo=kedro)](https://kedro.org)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
+[![Prophet](https://img.shields.io/badge/Prophet-1.2.1-orange.svg)](https://facebook.github.io/prophet/)
 
 ## Overview
 
-This is your new Kedro project, which was generated using `kedro 1.1.1`.
+A Bitcoin price forecasting system built with Kedro for ML pipeline orchestration, Prophet for time series forecasting, and FastAPI for serving predictions via REST API.
 
-Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
+### Features
 
-## Rules and guidelines
+- **Automated Data Ingestion**: Fetches historical Bitcoin data from Binance API
+- **Prophet Forecasting**: Uses Facebook Prophet for time series predictions with seasonality modeling
+- **Kedro Pipelines**: Well-organized, reproducible ML pipelines with data lineage
+- **REST API**: FastAPI-based API with automatic documentation and validation
+- **Configurable Predictions**: Forecasts up to 365 days ahead with confidence intervals
 
-In order to get the best out of the template:
-
-* Don't remove any lines from the `.gitignore` file we provide
-* Make sure your results can be reproduced by following a data engineering convention
-* Don't commit data to your repository
-* Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
-
-## How to install dependencies
-
-Declare any dependencies in `requirements.txt` for `pip` installation.
-
-To install them, run:
+## Architecture
 
 ```
-pip install -r requirements.txt
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Binance API    │────▶│  Kedro Pipeline │────▶│  Prophet Model │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                         │
+                                                         ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Client/App    │◀────│   FastAPI       │◀────│   Predictions  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-## How to run your Kedro pipeline
+## Quick Start
 
-You can run your Kedro project with:
+### Installation
 
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd crypto-ts-forecast
+
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -e .
 ```
+
+### Pipeline Execution
+
+Execute the complete ML pipeline to train the model with historical Bitcoin data:
+
+```bash
 kedro run
 ```
 
-## How to test your Kedro project
+Pipeline stages:
+1. Data ingestion from Binance API (2 years of daily OHLCV data)
+2. Data processing and transformation for Prophet format
+3. Model training with seasonality components
+4. Forecast generation for configurable time horizon
 
-Have a look at the file `tests/test_run.py` for instructions on how to write your tests. You can run your tests as follows:
+### API Server
+
+Start the FastAPI server:
+
+```bash
+# Direct module execution
+python -m crypto_ts_forecast.api.main
+
+# Entry point command
+crypto-forecast-api
+```
+
+The API will be available at `http://localhost:8000`
+
+### API Documentation
+
+Open your browser and go to:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+## API Endpoints
+
+### Health Check
+```bash
+GET /health
+```
+
+### Get Current Bitcoin Price
+```bash
+GET /api/v1/price/current?symbol=BTCUSDT
+```
+
+### Get Forecast
+```bash
+GET /api/v1/forecast?days_ahead=30
+```
+
+### Generate New Forecast (with optional retraining)
+```bash
+POST /api/v1/forecast
+Content-Type: application/json
+
+{
+    "days_ahead": 30,
+    "retrain": false
+}
+```
+
+### Run Pipeline
+```bash
+POST /api/v1/pipelines/run
+Content-Type: application/json
+
+{
+    "pipeline_name": "__default__"
+}
+```
+
+### Get Model Info
+```bash
+GET /api/v1/model/info
+```
+
+## Usage Examples
+
+### Python Client
+```python
+import requests
+
+# Get forecast
+response = requests.get("http://localhost:8000/api/v1/forecast?days_ahead=7")
+forecast = response.json()
+
+for prediction in forecast["predictions"]:
+    print(f"{prediction['date']}: ${prediction['predicted_price']:,.2f}")
+```
+
+### Command Line
+```bash
+# Get 7-day forecast
+curl "http://localhost:8000/api/v1/forecast?days_ahead=7"
+
+# Retrain model and get forecast
+curl -X POST "http://localhost:8000/api/v1/forecast" \
+     -H "Content-Type: application/json" \
+     -d '{"days_ahead": 30, "retrain": true}'
+```
+
+## Kedro Pipelines
+
+### Available Pipelines
+
+| Pipeline | Description |
+|----------|-------------|
+| `data_ingestion` | Fetches Bitcoin data from Binance API |
+| `data_processing` | Transforms data to Prophet format |
+| `model_training` | Trains and evaluates Prophet model |
+| `inference` | Generates future predictions |
+| `__default__` | Runs all pipelines in sequence |
+
+### Run Specific Pipeline
+```bash
+kedro run --pipeline data_ingestion
+kedro run --pipeline model_training
+```
+
+### Visualize Pipeline
+```bash
+kedro viz
+```
+
+## Configuration
+
+### Pipeline Parameters
+
+Configurable via `conf/base/parameters.yml`:
+
+```yaml
+binance:
+  symbol: "BTCUSDT"
+  interval: "1d"
+  years_of_data: 2
+
+prophet:
+  price_column: "close"
+  seasonality_mode: "multiplicative"
+  yearly_seasonality: true
+  weekly_seasonality: true
+  changepoint_prior_scale: 0.5
+  seasonality_prior_scale: 10.0
+  changepoint_range: 0.9
+  test_size_days: 30
+
+forecast:
+  days_ahead: 30
+```
+
+### Data Management
+
+Data catalog configured in `conf/base/catalog.yml`. Datasets are stored as Parquet files with gzip compression. Trained models are persisted as pickle files.
+
+## Project Structure
 
 ```
+crypto-ts-forecast/
+├── conf/                      # Configuration files
+│   ├── base/
+│   │   ├── catalog.yml        # Data catalog
+│   │   └── parameters.yml     # Parameters
+│   └── local/
+│       └── credentials.yml    # Credentials (gitignored)
+├── data/                      # Data storage
+│   ├── 01_raw/                # Raw data from Binance
+│   ├── 02_intermediate/       # Validated data
+│   ├── 03_primary/            # Prophet base dataset
+│   ├── 04_feature/            # Feature-enhanced dataset
+│   ├── 05_model_input/        # Train/test splits
+│   ├── 06_models/             # Trained Prophet model
+│   ├── 07_model_output/       # Predictions
+│   └── 08_reporting/          # Reports and metrics
+├── src/crypto_ts_forecast/
+│   ├── api/                   # FastAPI application
+│   │   ├── app.py             # App factory and routes
+│   │   ├── schemas.py         # Pydantic models
+│   │   ├── services.py        # Business logic
+│   │   └── main.py            # Entry point
+│   └── pipelines/
+│       ├── data_ingestion/    # Binance data fetching
+│       ├── data_processing/   # Data transformation
+│       ├── model_training/    # Prophet training
+│       └── inference/         # Forecast generation
+└── tests/                     # Unit tests
+```
+
+## Development
+
+### Run Tests
+```bash
 pytest
 ```
 
-You can configure the coverage threshold in your project's `pyproject.toml` file under the `[tool.coverage.report]` section.
-
-
-## Project dependencies
-
-To see and update the dependency requirements for your project use `requirements.txt`. You can install the project requirements with `pip install -r requirements.txt`.
-
-[Further information about project dependencies](https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#project-specific-dependencies)
-
-## How to work with Kedro and notebooks
-
-> Note: Using `kedro jupyter` or `kedro ipython` to run your notebook provides these variables in scope: `context`, 'session', `catalog`, and `pipelines`.
->
-> Jupyter, JupyterLab, and IPython are already included in the project requirements by default, so once you have run `pip install -r requirements.txt` you will not need to take any extra steps before you use them.
-
-### Jupyter
-To use Jupyter notebooks in your Kedro project, you need to install Jupyter:
-
-```
-pip install jupyter
+### Lint Code
+```bash
+ruff check src/
 ```
 
-After installing Jupyter, you can start a local notebook server:
-
-```
-kedro jupyter notebook
-```
-
-### JupyterLab
-To use JupyterLab, you need to install it:
-
-```
-pip install jupyterlab
+### Format Code
+```bash
+ruff format src/
 ```
 
-You can also start JupyterLab:
+## Requirements
 
-```
-kedro jupyter lab
-```
+- Python 3.10+
+- Kedro 1.1.1
+- Prophet 1.2.1
+- FastAPI 0.104+
+- See `requirements.txt` for full list
 
-### IPython
-And if you want to run an IPython session:
+## License
 
-```
-kedro ipython
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### How to ignore notebook output cells in `git`
-To automatically strip out all output cell contents before committing to `git`, you can use tools like [`nbstripout`](https://github.com/kynan/nbstripout). For example, you can add a hook in `.git/config` with `nbstripout --install`. This will run `nbstripout` before anything is committed to `git`.
+## Disclaimer
 
-> *Note:* Your output cells will be retained locally.
-
-## Package your Kedro project
-
-[Further information about building project documentation and packaging your project](https://docs.kedro.org/en/stable/tutorial/package_a_project.html)
+**This is not financial advice.** The predictions generated by this system are for educational and informational purposes only. Cryptocurrency markets are highly volatile and past performance does not guarantee future results. Users should conduct their own research before making investment decisions.
