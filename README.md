@@ -249,12 +249,12 @@ pytest
 
 ### Lint Code
 ```bash
-ruff check src/
+ruff check .
 ```
 
 ### Format Code
 ```bash
-ruff format src/
+ruff format .
 ```
 
 ## Requirements

@@ -110,3 +110,11 @@ jobs:
           body_path: changelog.md
           prerelease: ${{ steps.next_version.outputs.prerelease == 'true' }}
           generate_release_notes: true
+
+      - name: Sync dev with main
+        if: github.base_ref == 'main'
+        run: |
+          git fetch origin dev
+          git checkout -B dev origin/dev
+          git merge main
+          git push origin dev
