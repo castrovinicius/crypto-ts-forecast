@@ -52,6 +52,20 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+### Docker
+
+You can also build and run the application using Docker (with `uv` for fast builds):
+
+```bash
+# Build the image
+docker build -t crypto-ts-forecast .
+
+# Run the container
+docker run --rm -p 8000:8000 --name crypto-api crypto-ts-forecast
+```
+
+The API will be available at `http://localhost:8000/docs`
+
 ### Pipeline Execution
 
 Execute the complete ML pipeline to train the model with historical Bitcoin data:
