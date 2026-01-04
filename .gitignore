@@ -160,3 +160,7 @@ venv.bak/
 
 # mlflow local runs
 mlruns/*
+
+# tests
+.pytest_cache/
+.ruff_cache/
