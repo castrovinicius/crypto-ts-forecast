@@ -1,4 +1,4 @@
 """crypto-ts-forecast
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5-dev1"
