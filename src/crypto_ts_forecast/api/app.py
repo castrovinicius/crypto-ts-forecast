@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -27,34 +27,30 @@ from .services import ForecastService
 
 logger = logging.getLogger(__name__)
 
-# Global service instance
-_forecast_service: ForecastService | None = None
 
-
-def get_forecast_service() -> ForecastService:
+def get_forecast_service(request: Request) -> ForecastService:
     """Get the forecast service instance."""
-    if _forecast_service is None:
+    service = getattr(request.app.state, "forecast_service", None)
+    if service is None:
         raise HTTPException(
             status_code=500,
             detail="Forecast service not initialized",
         )
-    return _forecast_service
+    return service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global _forecast_service
-
     # Get project path from app state or use default
     project_path = getattr(app.state, "project_path", Path.cwd())
-    _forecast_service = ForecastService(project_path)
+    app.state.forecast_service = ForecastService(project_path)
     logger.info("Forecast service initialized")
 
     yield
 
     # Cleanup
-    _forecast_service = None
+    app.state.forecast_service = None
     logger.info("Forecast service cleaned up")
 
 
@@ -68,25 +64,8 @@ def create_app(project_path: str | Path | None = None) -> FastAPI:
         Configured FastAPI application.
     """
     app = FastAPI(
-        title="Bitcoin Price Forecast API",
-        description="""
-        REST API for Bitcoin price forecasting using Prophet and Kedro.
-        
-        ## Features
-        
-        - **Forecast**: Get Bitcoin price predictions for up to 365 days
-        - **Pipeline Management**: Run Kedro pipelines for data ingestion and model training
-        - **Model Info**: Check trained model status and metrics
-        - **Current Price**: Get real-time Bitcoin price from Binance
-        
-        ## Pipelines
-        
-        - `data_ingestion`: Fetch data from Binance API
-        - `data_processing`: Transform data for Prophet
-        - `model_training`: Train and evaluate Prophet model
-        - `inference`: Generate forecasts
-        - `__default__`: Run all pipelines
-        """,
+        title="Crypto Forecast API",
+        description="Forecasting service for cryptocurrency markets powered by Kedro and Prophet.",
         version=__version__,
         lifespan=lifespan,
         responses={
@@ -176,9 +155,10 @@ def register_routes(app: FastAPI) -> None:
         tags=["Model"],
         summary="Get model information",
     )
-    async def get_model_info() -> ModelInfoResponse:
+    async def get_model_info(
+        service: ForecastService = Depends(get_forecast_service),
+    ) -> ModelInfoResponse:
         """Get information about the trained model."""
-        service = get_forecast_service()
         info = service.get_model_info()
         return ModelInfoResponse(**info)
 
@@ -187,9 +167,10 @@ def register_routes(app: FastAPI) -> None:
         tags=["Pipelines"],
         summary="List available pipelines",
     )
-    async def list_pipelines() -> dict[str, list[str]]:
+    async def list_pipelines(
+        service: ForecastService = Depends(get_forecast_service),
+    ) -> dict[str, list[str]]:
         """Get list of available Kedro pipelines."""
-        service = get_forecast_service()
         return {"pipelines": service.get_available_pipelines()}
 
     @app.post(
@@ -198,7 +179,10 @@ def register_routes(app: FastAPI) -> None:
         tags=["Pipelines"],
         summary="Run a pipeline",
     )
-    async def run_pipeline(request: PipelineRunRequest) -> PipelineRunResponse:
+    async def run_pipeline(
+        request: PipelineRunRequest,
+        service: ForecastService = Depends(get_forecast_service),
+    ) -> PipelineRunResponse:
         """Run a Kedro pipeline.
 
         Available pipelines:
@@ -208,7 +192,6 @@ def register_routes(app: FastAPI) -> None:
         - `inference`: Generate forecasts
         - `__default__`: Run all pipelines
         """
-        service = get_forecast_service()
         result = service.run_pipeline(
             pipeline_name=request.pipeline_name,
         )
@@ -227,7 +210,10 @@ def register_routes(app: FastAPI) -> None:
         tags=["Forecast"],
         summary="Generate forecast",
     )
-    async def generate_forecast(request: ForecastRequest) -> ForecastResponse:
+    async def generate_forecast(
+        request: ForecastRequest,
+        service: ForecastService = Depends(get_forecast_service),
+    ) -> ForecastResponse:
         """Generate Bitcoin price forecast.
 
         This endpoint will:
@@ -235,7 +221,6 @@ def register_routes(app: FastAPI) -> None:
         2. Generate predictions for the specified number of days
         3. Return predictions with uncertainty intervals
         """
-        service = get_forecast_service()
         result = service.get_forecast(
             days_ahead=request.days_ahead,
             retrain=request.retrain,
@@ -282,13 +267,13 @@ def register_routes(app: FastAPI) -> None:
             le=365,
             description="Number of days to forecast",
         ),
+        service: ForecastService = Depends(get_forecast_service),
     ) -> ForecastResponse:
         """Get Bitcoin price forecast without retraining.
 
         If no model exists, this will return an error.
         Use POST /api/v1/forecast with retrain=true to train first.
         """
-        service = get_forecast_service()
         result = service.get_forecast(days_ahead=days_ahead, retrain=False)
 
         if result["status"] == "error":

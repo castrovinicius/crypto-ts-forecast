@@ -29,7 +29,8 @@ dependencies = [
     "pytest-mock==1.13.0",
     "ruff==0.14.10",
     "nbsphinx>=0.8.1",
-    "myst-parser>=2.0.0"
+    "myst-parser>=2.0.0",
+    "kedro-mlflow==2.0.0"
 ]
 
 [project.scripts]

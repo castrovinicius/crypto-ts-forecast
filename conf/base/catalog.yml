@@ -51,6 +51,7 @@ test_dataset:
 # Model Training Pipeline Datasets
 # =============================================================================
 
+# Prophet model - saved locally and logged to MLflow via hooks
 prophet_model:
   type: pickle.PickleDataset
   filepath: data/06_models/prophet_model.pkl

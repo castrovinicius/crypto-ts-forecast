@@ -6,6 +6,7 @@ This module contains functions to train and evaluate Prophet models.
 import logging
 from typing import Any
 
+import mlflow
 import pandas as pd
 from prophet import Prophet
 
@@ -69,6 +70,14 @@ def train_prophet_model(
 
     logger.info("Prophet model training completed")
 
+    # Log model parameters to MLflow if active run exists
+    if mlflow.active_run():
+        mlflow.log_param("model_type", "Prophet")
+        mlflow.log_param("training_samples", len(train_data))
+        mlflow.log_param("training_start_date", str(train_data["ds"].min()))
+        mlflow.log_param("training_end_date", str(train_data["ds"].max()))
+        logger.info("Logged training metadata to MLflow")
+
     return model
 
 
@@ -109,10 +118,16 @@ def evaluate_model(
     # Filter out zero values to avoid division by zero
     non_zero_mask = y_true != 0
     if non_zero_mask.any():
-        mape = float((abs(y_true[non_zero_mask] - y_pred[non_zero_mask]) / abs(y_true[non_zero_mask])).mean() * 100)
+        mape = float(
+            (
+                abs(y_true[non_zero_mask] - y_pred[non_zero_mask])
+                / abs(y_true[non_zero_mask])
+            ).mean()
+            * 100
+        )
     else:
         # If all values are zero, MAPE is undefined; use NaN
-        mape = float('nan')
+        mape = float("nan")
 
     # Root Mean Squared Error
     rmse = float(((y_true - y_pred) ** 2).mean() ** 0.5)
@@ -140,7 +155,7 @@ def evaluate_model(
         "test_end_date": str(test_data["ds"].max()),
     }
 
-    logger.info(f"Model evaluation results:")
+    logger.info("Model evaluation results:")
     logger.info(f"  MAE: ${mae:,.2f}")
     logger.info(f"  MAPE: {mape:.2f}%")
     logger.info(f"  RMSE: ${rmse:,.2f}")

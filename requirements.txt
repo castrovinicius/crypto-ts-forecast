@@ -17,3 +17,4 @@ kedro-viz>=12.2.0
 pytest>=9.0.2
 pytest-cov==6.3.0
 pytest-mock==1.13.0
+kedro-mlflow==2.0.0

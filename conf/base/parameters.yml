@@ -47,3 +47,46 @@ prophet:
 forecast:
   # Number of days to forecast into the future
   days_ahead: 30
+
+# =============================================================================
+# MLOps Configuration
+# =============================================================================
+mlops:
+  # Model metadata for tracking and governance
+  model:
+    name: "crypto_ts_forecast_prophet"
+    description: "Prophet time series model for Bitcoin price forecasting"
+    owner: "data_science_team"
+    
+  # Model versioning and lifecycle
+  versioning:
+    # Automatically register model in MLflow Model Registry
+    register_model: true
+    
+    # Model stage (None, Staging, Production, Archived)
+    # Set to "Staging" for newly trained models
+    default_stage: "Staging"
+    
+    # Version tagging strategy
+    tags:
+      task: "time_series_forecasting"
+      asset_class: "cryptocurrency"
+      symbol: "BTCUSDT"
+      framework: "prophet"
+      
+  # Model performance thresholds for production deployment
+  # Models must meet these criteria to be promoted to Production
+  deployment_thresholds:
+    min_r2: 0.7  # Minimum R² score
+    max_mape: 15.0  # Maximum MAPE percentage
+    min_test_samples: 20  # Minimum test samples required
+    
+  # Monitoring and alerting
+  monitoring:
+    # Enable data drift detection
+    enable_drift_detection: false
+    
+    # Alert thresholds for production models
+    alert_thresholds:
+      mape_degradation_pct: 20  # Alert if MAPE increases by this %
+      prediction_latency_ms: 1000  # Alert if prediction takes longer
