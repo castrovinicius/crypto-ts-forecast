@@ -6,6 +6,7 @@ project's structure, and in files named test_*.py.
 
 from pathlib import Path
 
+import pandas as pd
 from kedro.framework.session import KedroSession
 from kedro.framework.startup import bootstrap_project
 
@@ -190,24 +191,43 @@ class TestKedroRun:
             ],
         ]
 
-        mock_response_data = mocker.Mock()
-        mock_response_data.json.return_value = mock_data
-        mock_response_data.raise_for_status.return_value = None
+        # Fear & Greed Index records covering the BTC date range above.
+        # With date_format=us the API returns timestamps as MM-DD-YYYY strings.
+        fng_dates = pd.date_range("2024-01-01", "2024-01-20", freq="D")
+        fng_records = [
+            {"timestamp": d.strftime("%m-%d-%Y"), "value": "50"} for d in fng_dates
+        ]
 
-        # Mock empty response to terminate the loop
-        mock_response_empty = mocker.Mock()
-        mock_response_empty.json.return_value = []
-        mock_response_empty.raise_for_status.return_value = None
+        # Both node modules import the same `requests` module, so patching it
+        # once covers the Binance and Fear & Greed calls. Dispatch on the URL,
+        # and key Binance pagination off a dedicated counter so the mock stays
+        # correct even if unrelated `requests.get` calls (telemetry, update
+        # checks) happen elsewhere during the run.
+        binance_calls = {"n": 0}
+
+        def fake_get(url, *args, **kwargs):
+            response = mocker.Mock()
+            response.raise_for_status.return_value = None
+            if "alternative.me" in url:
+                response.json.return_value = {"data": fng_records}
+            elif "binance" in url:
+                binance_calls["n"] += 1
+                # First page returns the klines; later pages are empty so the
+                # pagination loop terminates.
+                response.json.return_value = mock_data if binance_calls["n"] == 1 else []
+            else:
+                response.json.return_value = []
+            return response
 
         mocker.patch(
             "crypto_ts_forecast.pipelines.data_ingestion.nodes.requests.get",
-            side_effect=[mock_response_data, mock_response_empty],
+            side_effect=fake_get,
         )
 
         bootstrap_project(Path.cwd())
 
-        # Override test_size_days to 2 days so that with 12 days of data,
-        # we have 10 days for training (Prophet needs >= 2)
+        # With 12 mocked days, the lag-1 regressor drops one row (-> 11) and a
+        # 2-day test split leaves ~9 days for training (Prophet needs >= 2).
         extra_params = {"prophet": {"test_size_days": 2}}
 
         with KedroSession.create(

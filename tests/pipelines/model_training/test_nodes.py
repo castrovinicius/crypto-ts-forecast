@@ -40,24 +40,21 @@ class TestModelTrainingNodes:
             daily_seasonality=True,
             changepoint_prior_scale=0.05,
             seasonality_prior_scale=10.0,
-            add_volume_regressor=True,
             changepoint_range=0.8,
+            add_regressors=True,
         )
 
         assert model == mock_model
         mock_prophet_cls.assert_called_once()
-        mock_model.add_regressor.assert_called_with("volume")
-        mock_model.add_seasonality.assert_called()  # Check for halving cycle
-        mock_model.fit.assert_called_with(sample_train_data)
+        # 'volume' is the only non-ds/y, non-MA column, so it is registered
+        # as a regressor
+        mock_model.add_regressor.assert_called_once_with("volume")
+        mock_model.fit.assert_called_once_with(sample_train_data)
 
     def test_evaluate_model(self, sample_test_data):
         mock_model = Mock()
-        # Mock predict return
-        future_df = sample_test_data[["ds"]].copy()
-        if "volume" in sample_test_data.columns:
-            future_df["volume"] = sample_test_data["volume"]
 
-        # Return perfect predictions for easy metric check
+        # Return perfect predictions so the error metrics collapse to zero
         forecast = pd.DataFrame(
             {
                 "ds": sample_test_data["ds"],
@@ -66,9 +63,7 @@ class TestModelTrainingNodes:
         )
         mock_model.predict.return_value = forecast
 
-        metrics = evaluate_model(
-            model=mock_model, test_data=sample_test_data, add_volume_regressor=True
-        )
+        metrics = evaluate_model(model=mock_model, test_data=sample_test_data)
 
         assert metrics["mae"] == 0.0
         assert metrics["rmse"] == 0.0

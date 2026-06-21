@@ -316,7 +316,17 @@ crypto-ts-forecast/
 
 ### Run Tests
 ```bash
-pytest
+# Run all tests
+uv run pytest
+
+# Verbose output (lists each test with PASSED/FAILED)
+uv run pytest tests/ -v
+
+# Run a specific pipeline's tests
+uv run pytest tests/pipelines/inference -v
+
+# Show print() output (disable capture)
+uv run pytest -vs
 ```
 
 ### Lint Code

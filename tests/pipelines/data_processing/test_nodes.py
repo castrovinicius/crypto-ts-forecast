@@ -33,54 +33,74 @@ class TestDataProcessingNodes:
         prophet_df = create_prophet_dataset(sample_validated_data, price_column="close")
 
         assert isinstance(prophet_df, pd.DataFrame)
-        assert list(prophet_df.columns) == ["ds", "y"]
-        assert len(prophet_df) == 10
+        # ds, y plus a lag-1 regressor for every OHLCV column except the target
+        assert list(prophet_df.columns) == [
+            "ds",
+            "y",
+            "open_lag1",
+            "high_lag1",
+            "low_lag1",
+            "volume_lag1",
+        ]
+        # The lag shift drops the first row (10 -> 9)
+        assert len(prophet_df) == 9
         assert pd.api.types.is_datetime64_any_dtype(prophet_df["ds"])
-        # Check if timezone is removed (tz-naive)
+        # Timezone must be stripped (tz-naive) for Prophet
         assert prophet_df["ds"].dt.tz is None
 
-    def test_add_features_with_volume(self, sample_validated_data):
+    def test_create_prophet_dataset_no_regressors(self, sample_validated_data):
+        prophet_df = create_prophet_dataset(
+            sample_validated_data, price_column="close", add_regressors=False
+        )
+
+        # Without regressors only the base Prophet columns remain
+        assert list(prophet_df.columns) == ["ds", "y"]
+        # No lag shift means no rows are dropped
+        assert len(prophet_df) == 10
+
+    def test_create_prophet_dataset_custom_regressors(self, sample_validated_data):
+        prophet_df = create_prophet_dataset(
+            sample_validated_data,
+            price_column="close",
+            regressor_columns=["volume"],
+            lag_days=2,
+        )
+
+        assert list(prophet_df.columns) == ["ds", "y", "volume_lag2"]
+        # lag_days=2 drops the first two rows (10 -> 8)
+        assert len(prophet_df) == 8
+
+    def test_add_features_with_moving_averages(self):
         prophet_df = pd.DataFrame(
             {
-                "ds": sample_validated_data["timestamp"],
-                "y": sample_validated_data["close"],
+                "ds": pd.date_range(start="2021-01-01", periods=10, freq="D"),
+                "y": range(10),
+                "volume_lag1": range(10, 20),
             }
         )
 
-        enhanced_df = add_features(
-            prophet_df, add_volume=True, validated_data=sample_validated_data
-        )
+        enhanced_df = add_features(prophet_df, add_moving_averages=True, ma_window=3)
 
-        assert "volume" in enhanced_df.columns
+        # A moving-average column is added for the regressor only (not ds/y)
+        assert "volume_lag1_ma3" in enhanced_df.columns
+        assert "y_ma3" not in enhanced_df.columns
         assert len(enhanced_df) == 10
-        # Check if volume is log transformed (should be > 0 if original > 1)
-        # Original volume is random * 100, so likely > 1.
-        # The code does: x if x > 0 else 1. Wait, the code says:
-        # prophet_df["volume"] = prophet_df["volume"].apply(lambda x: x if x > 0 else 1)
-        # It does NOT log transform in the code I read?
-        # Let me check the code again.
-        # "prophet_df["volume"] = prophet_df["volume"].apply(lambda x: x if x > 0 else 1)"
-        # The comment says "Log transform volume for better scaling" but the code just replaces <=0 with 1?
-        # Ah, I might have misread or the code is buggy/misleading.
-        # Let's check the code snippet I read earlier.
-        # "prophet_df["volume"] = prophet_df["volume"].apply(lambda x: x if x > 0 else 1)  # Avoid log(0)"
-        # It seems it prepares for log transform but doesn't do np.log?
-        # Or maybe I missed a line.
-        # Let's assume it just adds the column for now based on what I saw.
-        pass
+        # With min_periods=1 the first MA value equals the first raw value
+        assert enhanced_df["volume_lag1_ma3"].iloc[0] == 10
 
-    def test_add_features_no_volume(self, sample_validated_data):
+    def test_add_features_disabled(self):
         prophet_df = pd.DataFrame(
             {
-                "ds": sample_validated_data["timestamp"],
-                "y": sample_validated_data["close"],
+                "ds": pd.date_range(start="2021-01-01", periods=5, freq="D"),
+                "y": range(5),
+                "volume_lag1": range(5),
             }
         )
 
-        enhanced_df = add_features(
-            prophet_df, add_volume=False, validated_data=sample_validated_data
-        )
-        assert "volume" not in enhanced_df.columns
+        enhanced_df = add_features(prophet_df, add_moving_averages=False)
+
+        # Nothing is added when moving averages are disabled
+        assert list(enhanced_df.columns) == ["ds", "y", "volume_lag1"]
 
     def test_split_train_test(self):
         dates = pd.date_range(start="2021-01-01", periods=10, freq="D")

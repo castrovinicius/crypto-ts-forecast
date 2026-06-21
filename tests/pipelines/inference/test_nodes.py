@@ -23,25 +23,23 @@ def sample_prophet_data():
 
 class TestInferenceNodes:
     def test_create_future_dataframe(self, sample_prophet_data):
+        # The model argument is unused by the node; the historical data and the
+        # chosen strategy drive the future regressor values.
         mock_model = Mock()
-        # Mock make_future_dataframe
-        future_dates = pd.date_range(
-            start="2021-01-01", periods=35, freq="D"
-        )  # 30 historical + 5 future
-        mock_model.make_future_dataframe.return_value = pd.DataFrame(
-            {"ds": future_dates}
-        )
 
         future_df = create_future_dataframe(
             model=mock_model,
             prophet_data=sample_prophet_data,
             forecast_days=5,
-            add_volume_regressor=True,
         )
 
-        assert len(future_df) == 35
+        # Only the future rows are returned (one per day for daily data)
+        assert len(future_df) == 5
         assert "volume" in future_df.columns
-        # Check if future volumes are filled (should be 100.0 as avg of last 30 is 100)
+        # All future dates fall beyond the last historical date
+        assert future_df["ds"].min() > sample_prophet_data["ds"].max()
+        # The default 'ma' strategy fills volume with the mean of recent
+        # values (all 100.0 in the fixture)
         assert future_df["volume"].iloc[-1] == 100.0
 
     def test_generate_forecast(self):
