@@ -20,6 +20,22 @@ validated_bitcoin_data:
     compression: gzip
 
 # =============================================================================
+# External Data Datasets
+# =============================================================================
+
+fear_greed_raw_data:
+  type: pandas.ParquetDataset
+  filepath: data/01_raw/fear_greed_raw.parquet
+  save_args:
+    compression: gzip
+
+enriched_bitcoin_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/bitcoin_enriched.parquet
+  save_args:
+    compression: gzip
+
+# =============================================================================
 # Data Processing Pipeline Datasets
 # =============================================================================
 

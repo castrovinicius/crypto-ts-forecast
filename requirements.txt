@@ -18,3 +18,5 @@ pytest>=9.0.2
 pytest-cov==6.3.0
 pytest-mock==1.13.0
 kedro-mlflow==2.0.0
+optuna>=4.8.0
+statsmodels>=0.14.6

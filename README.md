@@ -23,7 +23,7 @@ A production-ready Bitcoin price forecasting system built with Kedro for ML pipe
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Binance API    │────▶│  Kedro Pipeline │────▶│  Prophet Model │
+│  Binance API    │─ ──▶│  Kedro Pipeline │───▶│  Prophet Model  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                               │                         │
                               ▼                         ▼
