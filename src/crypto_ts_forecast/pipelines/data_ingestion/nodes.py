@@ -47,9 +47,7 @@ def fetch_bitcoin_klines(
     all_klines: list[list[Any]] = []
     current_start = start_ms
 
-    logger.info(
-        f"Fetching {symbol} data from {start_time.date()} to {end_time.date()}"
-    )
+    logger.info(f"Fetching {symbol} data from {start_time.date()} to {end_time.date()}")
 
     while current_start < end_ms:
         params = {

@@ -73,7 +73,9 @@ class ForecastResponse(BaseModel):
 
     status: str = Field(..., description="Forecast status")
     symbol: str = Field(..., description="Trading pair symbol")
-    last_historical_date: dt.date = Field(..., description="Last date of historical data")
+    last_historical_date: dt.date = Field(
+        ..., description="Last date of historical data"
+    )
     last_historical_price: float = Field(..., description="Last known price")
     forecast_days: int = Field(..., description="Number of days forecasted")
     predictions: list[PredictionPoint] = Field(..., description="List of predictions")
@@ -85,9 +87,7 @@ class ModelInfoResponse(BaseModel):
 
     model_exists: bool = Field(..., description="Whether a trained model exists")
     model_type: str | None = Field(default=None, description="Type of model")
-    training_date: str | None = Field(
-        default=None, description="Date of last training"
-    )
+    training_date: str | None = Field(default=None, description="Date of last training")
     metrics: dict[str, Any] | None = Field(
         default=None, description="Model evaluation metrics"
     )

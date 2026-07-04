@@ -164,3 +164,6 @@ mlruns/*
 # tests
 .pytest_cache/
 .ruff_cache/
+
+# Claude
+.claude

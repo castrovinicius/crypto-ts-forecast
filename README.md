@@ -4,16 +4,18 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
 [![Prophet](https://img.shields.io/badge/Prophet-1.2.1-orange.svg)](https://facebook.github.io/prophet/)
+[![MLflow](https://img.shields.io/badge/MLflow-Tracking-blue.svg)](https://mlflow.org)
 
 ## Overview
 
-A Bitcoin price forecasting system built with Kedro for ML pipeline orchestration, Prophet for time series forecasting, and FastAPI for serving predictions via REST API.
+A production-ready Bitcoin price forecasting system built with Kedro for ML pipeline orchestration, Prophet for time series forecasting, FastAPI for serving predictions, and MLflow for experiment tracking and model versioning.
 
 ### Features
 
 - **Automated Data Ingestion**: Fetches historical Bitcoin data from Binance API
 - **Prophet Forecasting**: Uses Facebook Prophet for time series predictions with seasonality modeling
 - **Kedro Pipelines**: Well-organized, reproducible ML pipelines with data lineage
+- **MLflow Integration**: Comprehensive experiment tracking, model versioning, and MLOps best practices
 - **REST API**: FastAPI-based API with automatic documentation and validation
 - **Configurable Predictions**: Forecasts up to 365 days ahead with confidence intervals
 
@@ -21,8 +23,13 @@ A Bitcoin price forecasting system built with Kedro for ML pipeline orchestratio
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Binance API    │────▶│  Kedro Pipeline │────▶│  Prophet Model │
+│  Binance API    │─ ──▶│  Kedro Pipeline │───▶│  Prophet Model  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
+                              │                         │
+                              ▼                         ▼
+                        ┌─────────────────┐     ┌─────────────────┐
+                        │  MLflow Server  │────▶│ Model Registry  │
+                        └─────────────────┘     └─────────────────┘
                                                          │
                                                          ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -215,11 +222,62 @@ prophet:
 
 forecast:
   days_ahead: 30
+
+mlops:
+  model:
+    name: "crypto_ts_forecast_prophet"
+    description: "Prophet time series model for Bitcoin price forecasting"
+  versioning:
+    register_model: true
+    default_stage: "Staging"
+  deployment_thresholds:
+    min_r2: 0.7
+    max_mape: 15.0
 ```
 
 ### Data Management
 
-Data catalog configured in `conf/base/catalog.yml`. Datasets are stored as Parquet files with gzip compression. Trained models are persisted as pickle files.
+Data catalog configured in `conf/base/catalog.yml`. Datasets are stored as Parquet files with gzip compression. Trained models are tracked in MLflow and persisted in the Model Registry with versioning support.
+
+## MLOps with MLflow
+
+This project implements MLOps best practices using kedro-mlflow:
+
+### Experiment Tracking
+- ✅ Automatic parameter logging for all pipeline runs
+- ✅ Metrics tracking (MAE, MAPE, RMSE, R²)
+- ✅ Artifact management (models, reports, plots)
+- ✅ Run comparison and visualization
+
+### Model Versioning
+- ✅ Model Registry integration
+- ✅ Stage-based lifecycle (None → Staging → Production)
+- ✅ Version tagging and metadata
+- ✅ Model lineage and reproducibility
+
+### Model Governance
+- ✅ Deployment thresholds for quality gates
+- ✅ Automated model validation
+- ✅ Performance monitoring setup
+- ✅ Model metadata and documentation
+
+### Quick MLflow Commands
+
+```bash
+# Initialize MLflow
+python scripts/init_mlflow.py
+
+# View experiments
+kedro mlflow ui
+
+# Run pipeline with tracking
+kedro run --pipeline=model_training
+
+# Compare runs in notebook
+jupyter notebook notebooks/06_mlflow_demo.ipynb
+```
+
+**📚 Complete guide**: [docs/MLFLOW_GUIDE.md](docs/MLFLOW_GUIDE.md)
 
 ## Project Structure
 
@@ -258,7 +316,17 @@ crypto-ts-forecast/
 
 ### Run Tests
 ```bash
-pytest
+# Run all tests
+uv run pytest
+
+# Verbose output (lists each test with PASSED/FAILED)
+uv run pytest tests/ -v
+
+# Run a specific pipeline's tests
+uv run pytest tests/pipelines/inference -v
+
+# Show print() output (disable capture)
+uv run pytest -vs
 ```
 
 ### Lint Code
