@@ -2,11 +2,24 @@
 from the Kedro defaults. For further information, including these default values, see
 https://docs.kedro.org/en/stable/kedro_project_setup/settings.html."""
 
+import os
+
+from crypto_ts_forecast.hooks import MLflowHooks, ModelVersioningHooks
+
+# MLflow 2.x+ rejects the file-based tracking backend ("./mlruns") by default.
+# This project uses the local file store on purpose (see conf/local/mlflow.yml),
+# so opt back in. ``setdefault`` preserves any value already set in the env.
+os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+
 # Instantiated project hooks.
-# For example, after creating a hooks.py and defining a ProjectHooks class there, do
-# from crypto_ts_forecast.hooks import ProjectHooks
 # Hooks are executed in a Last-In-First-Out (LIFO) order.
-# HOOKS = (ProjectHooks(),)
+# MLflow hooks are registered to enable automatic experiment tracking,
+# metrics logging, and model versioning following MLOps best practices.
+HOOKS = (
+    MLflowHooks(),
+    ModelVersioningHooks(),
+)
+
 
 # Installed plugins for which to disable hook auto-registration.
 # DISABLE_HOOKS_FOR_PLUGINS = ("kedro-viz",)

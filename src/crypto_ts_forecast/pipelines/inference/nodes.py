@@ -9,6 +9,8 @@ from typing import Any
 import pandas as pd
 from prophet import Prophet
 
+from ..model_training.nodes import prepare_future_regressors
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,8 @@ def create_future_dataframe(
     model: Prophet,
     prophet_data: pd.DataFrame,
     forecast_days: int,
-    add_volume_regressor: bool,
+    ma_window: int = 21,
+    strategy: str = "ma",
 ) -> pd.DataFrame:
     """Create a future dataframe for making predictions.
 
@@ -24,36 +27,46 @@ def create_future_dataframe(
         model: Trained Prophet model.
         prophet_data: Historical data used for training.
         forecast_days: Number of days to forecast into the future.
-        add_volume_regressor: Whether to include volume regressor.
+        ma_window: Window size for moving averages (default: 21).
+        strategy: Strategy to estimate future regressor values.
+            'ma' uses the MA-{ma_window} of the last known values (default).
+            'last_value' repeats the last known value.
+            'trend' projects a linear trend forward.
 
     Returns:
-        DataFrame ready for predictions.
+        DataFrame ready for predictions with future regressor values.
     """
     logger.info(f"Creating future dataframe for {forecast_days} days ahead...")
 
-    # Create future dataframe
-    future = model.make_future_dataframe(periods=forecast_days, freq="D")
-
-    # If volume regressor was used, we need to provide future values
-    # For future dates, we'll use the rolling average of recent volume
-    if add_volume_regressor and "volume" in prophet_data.columns:
-        # Get the last known volumes
-        recent_volume_avg = prophet_data["volume"].tail(30).mean()
-
-        # Merge historical volumes
-        volume_df = prophet_data[["ds", "volume"]].copy()
-        future = future.merge(volume_df, on="ds", how="left")
-
-        # Fill future volumes with rolling average
-        future["volume"] = future["volume"].fillna(recent_volume_avg)
-
-        logger.info(
-            f"Added volume regressor with future estimate: {recent_volume_avg:,.2f}"
+    # Create future dates — hourly frequency, forecast_days × 24 periods
+    last_date = prophet_data["ds"].max()
+    freq = pd.infer_freq(prophet_data["ds"].tail(10)) or "h"
+    is_hourly = "h" in freq.lower() or "H" in freq
+    if is_hourly:
+        future_dates = pd.date_range(
+            start=last_date + pd.Timedelta(hours=1),
+            periods=forecast_days * 24,
+            freq="h",
+        )
+    else:
+        future_dates = pd.date_range(
+            start=last_date + pd.Timedelta(days=1),
+            periods=forecast_days,
+            freq="D",
         )
 
-    logger.info(f"Future dataframe created with {len(future)} rows")
+    # Prepare future regressors using the chosen strategy
+    future_df = prepare_future_regressors(
+        train_data=prophet_data,
+        future_dates=future_dates,
+        ma_window=ma_window,
+        strategy=strategy,
+    )
 
-    return future
+    logger.info(f"Future dataframe created with {len(future_df)} rows")
+    logger.info(f"Columns: {list(future_df.columns)}")
+
+    return future_df
 
 
 def generate_forecast(
